@@ -13,8 +13,8 @@ headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 # Creating session
 session = requests.Session()
 
-# list in which we add links to vacancies and the category of each vacancy
-links_to_vacancies = []
+# List with dictionaries with information about each vacancy
+vacancy_info = []
 
 # link to main page
 link_to_main = 'https://jobs.dou.ua/'
@@ -52,19 +52,17 @@ def get_categories(content):
     return categories
 
 
-def get_links(content, category):
+def get_links(content):
     """
-    add to list dictionaries with vacancy link and category
+    add to list vacancy link
     :param content: page content
-    :param category: category of vacancies
     """
 
     html = BeautifulSoup(content, "html.parser")
 
     for li in html.find_all('li', class_="l-vacancy"):
-        name = category
         link = li.find('a', class_="vt").get('href')
-        links_to_vacancies.append({"name": name, "url": link})
+        links_to_vacancies.append(link)
 
 
 def get_csrf(content):
@@ -96,19 +94,35 @@ def get_vacancy_count(content):
     return count
 
 
-def get_ajax_response(link, category):
+def get_ajax_response(link):
     """
     post ajax request, get ajax response and call the function to get links to vacancies
     :param link: link for ajax request
-    :param category: current category
     :return:
     """
     headers['Referer'] = link
 
     while load_data['count'] <= count_of_vacancy:
         post_response = session.post(link, data=load_data, headers=headers).json()
-        get_links(post_response["html"], category)
+        get_links(post_response["html"])
         load_data["count"] += 40
+
+
+def get_info(content, link, vacancy_category):
+    """
+    Get all information about the each vacancy
+    :param content: page content
+    :param vacancy_category: vacancy category
+    :param link: link to vacancy
+    """
+
+    html = BeautifulSoup(content, "html.parser")
+    vacancy_name = html.find("h1", class_="g-h2").text
+    company_name = html.find("div", class_="l-n").find("a").text
+    city = html.find("div", class_="sh-info").find("span").text.lstrip()
+    date = html.find("div", class_="date").text
+    vacancy_info.append({"vacancy_name": vacancy_name, "url": link, "vacancy_category": vacancy_category,
+                         "company_name": company_name,"city": city,"date": date})
 
 
 if __name__ == "__main__":
@@ -116,7 +130,11 @@ if __name__ == "__main__":
     # get categories
     vacancy_categories = get_categories(get_html(link_to_main))
 
-    for category in vacancy_categories[:2]:
+    for category in vacancy_categories:
+
+        # list in which we add links to vacancies
+        links_to_vacancies = []
+
         category_name = category['name']
 
         # create links to webpage and ajax request
@@ -130,7 +148,11 @@ if __name__ == "__main__":
         load_data = get_csrf(get_html(vacancy_link))
 
         # add links to links_to_vacancies from webpage and ajax response
-        get_links(get_html(vacancy_link), category_name)
-        get_ajax_response(ajax_link, category_name)
+        get_links(get_html(vacancy_link))
+        get_ajax_response(ajax_link)
 
-    print(links_to_vacancies)
+        for vacancy in links_to_vacancies:
+            get_info(get_html(vacancy), vacancy, category_name)
+
+    print(len(vacancy_info))
+    print(vacancy_info)

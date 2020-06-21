@@ -130,8 +130,7 @@ if __name__ == "__main__":
     # get categories
     vacancy_categories = get_categories(get_html(link_to_main))
 
-    for category in vacancy_categories:
-
+    for category in vacancy_categories[:1]:
         # list in which we add links to vacancies
         links_to_vacancies = []
 

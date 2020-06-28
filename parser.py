@@ -1,5 +1,7 @@
 import requests
 import re
+import csv
+import datetime
 from bs4 import BeautifulSoup
 
 # Request headers
@@ -122,7 +124,24 @@ def get_info(content, link, vacancy_category):
     city = html.find("div", class_="sh-info").find("span").text.lstrip()
     date = html.find("div", class_="date").text
     vacancy_info.append({"vacancy_name": vacancy_name, "url": link, "vacancy_category": vacancy_category,
-                         "company_name": company_name,"city": city,"date": date})
+                         "company_name": company_name, "city": city, "date": date})
+
+
+def import_csv(items, path):
+    """
+    Import all vacancies to csv file
+    :param items: list with vacancies
+    :param path: path to file
+    """
+    with open(path, 'w', newline='') as f:
+        writer = csv.writer(f, delimiter=';')
+
+        # add headers
+        writer.writerow(['Vacancy name', 'Link', 'Category', 'Company name', 'City', 'Publish date'])
+
+        for item in items:
+            writer.writerow([item['vacancy_name'], item['url'], item['vacancy_category'], item['company_name'],
+                             item['city'], item['date']])
 
 
 if __name__ == "__main__":
@@ -153,5 +172,10 @@ if __name__ == "__main__":
         for vacancy in links_to_vacancies:
             get_info(get_html(vacancy), vacancy, category_name)
 
+    # сreate file name using сurrent date and time
+    date = datetime.date.today()
+    file_name = 'vacancies ' + date.strftime("%Y-%m-%d") + '.csv'
+
+    import_csv(vacancy_info, file_name)
     print(len(vacancy_info))
     print(vacancy_info)
